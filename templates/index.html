@@ -17,4 +17,10 @@
     </div>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+<div id="quiz-container">
+    <p id="question"></p>
+    <div id="options"></div>
+    <button onclick="submitAnswer()">Submit Answer</button>
+    <p id="feedback"></p>
+</div>
 </html>

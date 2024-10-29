@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from key.env
-load_dotenv(".gitignore")
+load_dotenv("Key.env")
 
 app = Flask(__name__)
 
@@ -42,14 +42,19 @@ def generate_quiz():
         questions = response_text.strip().split("\n\n")
         quiz_questions = []
 
+        # Inside generate_quiz
         for question in questions:
             parts = question.split("\n")
             q_text = parts[0] if parts else "Question text unavailable"
             options = parts[1:] if len(parts) > 1 else []
 
+            # Assume the first option is the correct answer for demonstration
+            correct_answer = options[0] if options else ""
+
             quiz_questions.append({
                 "question": q_text,
-                "options": options
+                "options": options,
+                "correct_answer": correct_answer  # Add correct answer to the object
             })
 
         return jsonify({"questions": quiz_questions})
@@ -57,6 +62,17 @@ def generate_quiz():
     except Exception as e:
         print("Error details:", e)
         return jsonify({"error": "An error occurred while generating the quiz. Please try again later."}), 500
+# Handles checking the answer
+@app.route("/check_answer", methods=["POST"])
+def check_answer():
+    data = request.json
+    user_answer = data.get("answer", "")
+    correct_answer = data.get("correct_answer", "")
+
+    if user_answer == correct_answer:
+        return jsonify({"result": "Correct!"}), 200
+    else:
+        return jsonify({"result": "Incorrect, try again!"}), 200
 
 
 
