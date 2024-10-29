@@ -12,10 +12,13 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 print("API Key:", openai.api_key)
 
+#handles displaying the html file
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
+#Handles generating the quiz
 @app.route("/generate_quiz", methods=["POST"])
 def generate_quiz():
     data = request.json
@@ -54,6 +57,8 @@ def generate_quiz():
     except Exception as e:
         print("Error details:", e)
         return jsonify({"error": "An error occurred while generating the quiz. Please try again later."}), 500
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
