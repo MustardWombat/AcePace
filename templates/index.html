@@ -4,23 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Generator</title>
-    <!-- Flask-style link -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <!-- Direct path link -->
-    <link rel="stylesheet" href="../static/styles.css"></head>
+</head>
 <body>
     <div class="container">
-        <h1>Class Material Quiz Generator</h1>
+        <h1>Class Material Quiz</h1>
         <textarea id="classMaterial" placeholder="Paste your class materials here..."></textarea>
         <button onclick="generateQuiz()">Generate Quiz</button>
-        <div id="quiz"></div>
+
+        <div id="quiz-container">
+            <p id="question"></p>
+            <div id="options"></div>
+            <button onclick="submitAnswer()">Submit Answer</button>
+            <p id="feedback"></p>
+            <div id="score-summary">
+                <p><strong>Total Score:</strong> <span id="total-score">0</span></p>
+                <p><strong>Multiplier:</strong> <span id="multiplier">1</span></p>
+            </div>
+        </div>
     </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script>
+        function generateQuiz() {
+            const classMaterial = document.getElementById("classMaterial").value;
+
+            fetch("/generate_quiz", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: classMaterial })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    loadNextQuestion();
+                } else {
+                    alert(data.error || "Quiz generation failed.");
+                }
+            });
+        }
+
+        function loadNextQuestion() {
+            fetch("/get_question")
+            .then(response => response.json())
+            .then(data => {
+                if (data.question) {
+                    displayQuestion(data.question);
+                } else {
+                    document.getElementById("quiz-container").innerHTML = "<p>Quiz complete!</p>";
+                }
+            });
+        }
+
+        function displayQuestion(question) {
+            document.getElementById("question").innerText = question.question;
+            const optionsDiv = document.getElementById("options");
+            optionsDiv.innerHTML = "";
+
+            question.options.forEach(option => {
+                const button = document.createElement("button");
+                button.innerText = option;
+                button.onclick = () => selectAnswer(option);
+                optionsDiv.appendChild(button);
+            });
+        }
+
+        let selectedAnswer = "";
+
+        function selectAnswer(answer) {
+            selectedAnswer = answer;
+        }
+
+        function submitAnswer() {
+            if (!selectedAnswer) {
+                alert("Please select an answer.");
+                return;
+            }
+
+            fetch("/submit_answer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ answer: selectedAnswer })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("feedback").innerText = data.result;
+                selectedAnswer = "";  // Reset the selected answer
+                updateScoreSummary();  // Fetch the updated score after each answer
+                loadNextQuestion();  // Load the next question
+            });
+        }
+
+        function updateScoreSummary() {
+            fetch("/get_score_summary")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("total-score").innerText = data["Total Score"];
+                document.getElementById("multiplier").innerText = data["Final Multiplier"];
+            });
+        }
+    </script>
 </body>
-<div id="quiz-container">
-    <p id="question"></p>
-    <div id="options"></div>
-    <button onclick="submitAnswer()">Submit Answer</button>
-    <p id="feedback"></p>
-</div>
 </html>
