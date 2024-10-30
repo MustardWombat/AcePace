@@ -13,12 +13,11 @@ app.secret_key = 'your_secret_key'  # Needed to keep track of question index
 # Access the OpenAI API key from the environment
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
-# Calculate final score with streaks and multipliers
-def calculate_final_score(streak_criteria=3, base_score=10, multiplier_increment=0.5):
+# Calculate final score and current streak
+def calculate_final_score():
     total_score = 0
-    streak_count = 0
-    multiplier = 1
+    current_streak = 0
+    max_streak = 0
 
     try:
         with open("user_scores.csv", mode='r') as file:
@@ -29,18 +28,17 @@ def calculate_final_score(streak_criteria=3, base_score=10, multiplier_increment
                 result = row[3]  # Assume the result is in the fourth column (Correct! or Incorrect)
 
                 if result == "Correct!":
-                    streak_count += 1
-                    total_score += int(base_score * multiplier)
-                    if streak_count >= streak_criteria:
-                        multiplier += multiplier_increment
+                    current_streak += 1
+                    total_score += 10  # Increment score by 10 points for each correct answer
+                    max_streak = max(max_streak, current_streak)
                 else:
-                    streak_count = 0
-                    multiplier = 1
+                    current_streak = 0  # Reset streak on an incorrect answer
     except FileNotFoundError:
+        print("user_scores.csv not found. Starting with default score values.")
         total_score = 0
-        multiplier = 1
+        max_streak = 0
 
-    return {"Total Score": total_score, "Final Multiplier": multiplier}
+    return {"Total Score": total_score, "Current Streak": current_streak, "Max Streak": max_streak}
 
 
 # Generate the full quiz and save it in the session
@@ -51,7 +49,21 @@ def generate_quiz():
     if not class_material:
         return jsonify({"error": "No class material provided"}), 400
 
-    prompt = f"Generate a quiz with multiple-choice questions from the following material:\n{class_material}"
+    prompt = f"""
+    Create a quiz based on the following material. Each question should be a well-structured multiple-choice question with one correct answer and three plausible, factually incorrect options. Ensure the questions are challenging yet clear.
+
+    Material:
+    {class_material}
+
+    Please format the output as:
+    Q1. [Question here]
+    A) Option 1
+    B) Option 2
+    C) Option 3
+    D) Option 4
+    Correct Answer: [Correct Answer Letter]
+    """
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -64,8 +76,9 @@ def generate_quiz():
         for idx, question in enumerate(questions):
             parts = question.split("\n")
             q_text = parts[0] if parts else "Question text unavailable"
-            options = parts[1:] if len(parts) > 1 else []
-            correct_answer = options[0] if options else ""
+            options = [option[3:] for option in parts[1:5] if len(option) > 3]  # Extract full option text after "A) ", "B) ", etc.
+            correct_letter = parts[-1].split(": ")[-1] if "Correct Answer:" in parts[-1] else ""
+            correct_answer = options[ord(correct_letter) - ord('A')] if correct_letter else ""
 
             quiz_questions.append({
                 "question_id": idx + 1,
@@ -74,8 +87,10 @@ def generate_quiz():
                 "correct_answer": correct_answer
             })
 
-        session['quiz_questions'] = quiz_questions  # Save questions in session
-        session['current_question_index'] = 0  # Start at the first question
+        # Save questions in session and reset the current question index
+        session['quiz_questions'] = quiz_questions
+        session['current_question_index'] = 0
+        print("Quiz generated and stored in session.")  # Debugging
 
         return jsonify({"message": "Quiz generated successfully"}), 200
 
@@ -90,11 +105,17 @@ def get_question():
     quiz_questions = session.get('quiz_questions', [])
     current_index = session.get('current_question_index', 0)
 
+    if not quiz_questions:
+        return jsonify({"error": "No quiz available. Please generate the quiz first."}), 400
+
     if current_index < len(quiz_questions):
         question = quiz_questions[current_index]
         return jsonify({"question": question})
     else:
-        return jsonify({"message": "Quiz complete"}), 200
+        # Reset the question index to start the quiz over
+        session['current_question_index'] = 0
+        question = quiz_questions[0]  # Start with the first question again
+        return jsonify({"question": question, "message": "Quiz restarted"})
 
 
 # Update the question index after an answer is submitted
@@ -107,7 +128,7 @@ def submit_answer():
     quiz_questions = session.get('quiz_questions', [])
     if current_index < len(quiz_questions):
         correct_answer = quiz_questions[current_index]["correct_answer"]
-        result = "Correct!" if user_answer == correct_answer else "Incorrect, try again!"
+        result = "Correct!" if user_answer.strip().lower() == correct_answer.strip().lower() else "Incorrect, try again!"
 
         # Append the result to the CSV file
         with open("user_scores.csv", mode='a', newline='') as file:

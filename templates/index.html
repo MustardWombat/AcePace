@@ -19,7 +19,8 @@
             <p id="feedback"></p>
             <div id="score-summary">
                 <p><strong>Total Score:</strong> <span id="total-score">0</span></p>
-                <p><strong>Multiplier:</strong> <span id="multiplier">1</span></p>
+                <p><strong>Current Streak:</strong> <span id="current-streak">0</span></p>
+                <p><strong>Max Streak:</strong> <span id="max-streak">0</span></p>
             </div>
         </div>
     </div>
@@ -99,7 +100,8 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById("total-score").innerText = data["Total Score"];
-                document.getElementById("multiplier").innerText = data["Final Multiplier"];
+                document.getElementById("current-streak").innerText = data["Current Streak"];
+                document.getElementById("max-streak").innerText = data["Max Streak"];
             });
         }
     </script>
