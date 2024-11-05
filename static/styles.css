@@ -37,7 +37,10 @@ button {
     cursor: pointer; /* Pointer cursor on hover */
     transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    justify-content: center;
+    margin: 24px;
 }
+
 
 button:hover {
     background-color: #3700b3; /* Darker purple on hover */

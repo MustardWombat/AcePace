@@ -95,7 +95,7 @@ def generate_quiz():
     # OpenAI prompt for generating quiz questions
     prompt = f"""
     Create a quiz based on the following material. Each question should be a well-structured multiple-choice question with one correct answer and three plausible, factually incorrect options. Ensure the questions are challenging yet clear.
-
+    I want the questions to have a difficulty of 10 out of 10, with 10 being insanely hard, while 1 being easy
     Material:
     {class_material}
 

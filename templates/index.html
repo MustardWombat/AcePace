@@ -10,10 +10,10 @@
         <h1>Class Material Quiz</h1>
 
         <!-- Textarea for Class Material Input -->
-        <p><textarea id="classMaterial" placeholder="Would you like me to quiz you on anything in particular?"></textarea></p>
+        <textarea id="classMaterial" placeholder="Paste your class materials here..."></textarea>
 
         <!-- File Input for PDF Upload -->
-        <p><input type="file" id="pdfFile" accept="application/pdf"></p>
+        <input type="file" id="pdfFile" accept="application/pdf">
 
         <button onclick="generateQuiz()">Generate Quiz</button>
 
@@ -21,7 +21,6 @@
         <div id="quiz-container">
             <p id="question"></p>
             <div id="options"></div>
-            <button onclick="submitAnswer()">Submit Answer</button>
             <p id="feedback"></p>
 
             <!-- Score Summary Display -->
@@ -34,12 +33,20 @@
     </div>
 
     <script>
+        // Only load score summary on page load
         window.onload = function() {
             updateScoreSummary();
         };
+
         function generateQuiz() {
             const classMaterial = document.getElementById("classMaterial").value;
             const pdfFile = document.getElementById("pdfFile").files[0];
+
+            // Ensure at least one input is provided
+            if (!classMaterial && !pdfFile) {
+                alert("Please enter class materials or upload a PDF.");
+                return;
+            }
 
             // Create a FormData object to handle both text and file uploads
             const formData = new FormData();
@@ -57,7 +64,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.message) {
-                    loadNextQuestion();
+                    loadNextQuestion();  // Load the first question only after quiz is generated
                 } else {
                     alert(data.error || "Quiz generation failed.");
                 }
@@ -84,34 +91,38 @@
             question.options.forEach(option => {
                 const button = document.createElement("button");
                 button.innerText = option;
-                button.onclick = () => selectAnswer(option);
+                button.onclick = () => submitAnswer(option, button);
                 optionsDiv.appendChild(button);
             });
         }
 
-        let selectedAnswer = "";
-
-        function selectAnswer(answer) {
-            selectedAnswer = answer;
-        }
-
-        function submitAnswer() {
-            if (!selectedAnswer) {
-                alert("Please select an answer.");
-                return;
-            }
-
+        function submitAnswer(answer, button) {
             fetch("/submit_answer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ answer: selectedAnswer })
+                body: JSON.stringify({ answer: answer })
             })
             .then(response => response.json())
             .then(data => {
                 document.getElementById("feedback").innerText = data.result;
-                selectedAnswer = "";  // Reset the selected answer
-                updateScoreSummary();  // Fetch the updated score after each answer
-                loadNextQuestion();  // Load the next question
+
+                // Change button color based on result
+                if (data.result === "Correct!") {
+                    button.style.backgroundColor = "green";
+                    updateScoreSummary()
+                } else {
+                    button.style.backgroundColor = "red";
+                    updateScoreSummary()
+                }
+
+                // Disable all option buttons after selection
+                const optionButtons = document.querySelectorAll("#options button");
+                optionButtons.forEach(btn => btn.disabled = true);
+
+                // Load the next question after a delay
+                setTimeout(() => {
+                    loadNextQuestion();
+                }, 1500);  // 1.5-second delay
             });
         }
 

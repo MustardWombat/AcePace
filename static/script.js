@@ -1,41 +1,30 @@
-function generateQuiz() {
-    const classMaterial = document.getElementById("classMaterial").value;
-
-    fetch("/generate_quiz", {
+function submitAnswer(answer, button) {
+    fetch("/submit_answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: classMaterial })
+        body: JSON.stringify({ answer: answer })
     })
     .then(response => response.json())
     .then(data => {
-        const quizContainer = document.getElementById("quiz-container");
-        quizContainer.innerHTML = "";
+        document.getElementById("feedback").innerText = data.result;
 
-        data.questions.forEach((q, index) => {
-            const questionDiv = document.createElement("div");
-            questionDiv.className = "question";
+        // Change button color based on result
+        if (data.result === "Correct!") {
+            button.style.backgroundColor = "green";
+        } else {
+            button.style.backgroundColor = "red";
+        }
 
-            questionDiv.innerHTML = `<p>${q.question}</p>`;
-            q.options.forEach(option => {
-                const optionElem = document.createElement("button");
-                optionElem.textContent = option;
-                optionElem.onclick = () => submitAnswer(q.question_id, option, q.correct_answer);
-                questionDiv.appendChild(optionElem);
-            });
+        // Disable all option buttons after selection
+        const optionButtons = document.querySelectorAll("#options button");
+        optionButtons.forEach(btn => btn.disabled = true);
 
-            quizContainer.appendChild(questionDiv);
-        });
-    });
-}
+        // Update score summary right after answering
+        updateScoreSummary();
 
-function submitAnswer(question_id, answer, correct_answer) {
-    fetch("/check_answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question_id, answer, correct_answer })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.result);
+        // Load the next question after a delay to give feedback time
+        setTimeout(() => {
+            loadNextQuestion();
+        }, 1500);  // 1.5-second delay
     });
 }
