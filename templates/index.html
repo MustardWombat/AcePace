@@ -9,14 +9,23 @@
 <body>
     <div class="container">
         <h1>Class Material Quiz</h1>
+
+        <!-- Textarea for Class Material Input -->
         <textarea id="classMaterial" placeholder="Paste your class materials here..."></textarea>
+
+        <!-- File Input for PDF Upload -->
+        <input type="file" id="pdfFile" accept="application/pdf">
+
         <button onclick="generateQuiz()">Generate Quiz</button>
 
+        <!-- Quiz Container for Questions and Options -->
         <div id="quiz-container">
             <p id="question"></p>
             <div id="options"></div>
             <button onclick="submitAnswer()">Submit Answer</button>
             <p id="feedback"></p>
+
+            <!-- Score Summary Display -->
             <div id="score-summary">
                 <p><strong>Total Score:</strong> <span id="total-score">0</span></p>
                 <p><strong>Current Streak:</strong> <span id="current-streak">0</span></p>
@@ -28,11 +37,20 @@
     <script>
         function generateQuiz() {
             const classMaterial = document.getElementById("classMaterial").value;
+            const pdfFile = document.getElementById("pdfFile").files[0];
+
+            // Create a FormData object to handle both text and file uploads
+            const formData = new FormData();
+            if (classMaterial) {
+                formData.append("text", classMaterial);
+            }
+            if (pdfFile) {
+                formData.append("pdf", pdfFile);
+            }
 
             fetch("/generate_quiz", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: classMaterial })
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
